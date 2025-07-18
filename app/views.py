@@ -1,74 +1,84 @@
-from django.shortcuts import render
-from app.models import Cidade, DadosHidricos, Estado
+from django.shortcuts import render, get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+from .models import City, HydrologicalData, State
+
+def calculate_monthly_data(data):
+  months = [
+    {'name': 'Jan', 'temp': 'temperature_average_january', 'precip': 'precipitation_average_january'},
+    {'name': 'Fev', 'temp': 'temperature_average_february', 'precip': 'precipitation_average_february'},
+    {'name': 'Mar', 'temp': 'temperature_average_march', 'precip': 'precipitation_average_march'},
+    {'name': 'Abr', 'temp': 'temperature_average_april', 'precip': 'precipitation_average_april'},
+    {'name': 'Mai', 'temp': 'temperature_average_may', 'precip': 'precipitation_average_may'},
+    {'name': 'Jun', 'temp': 'temperature_average_june', 'precip': 'precipitation_average_june'},
+    {'name': 'Jul', 'temp': 'temperature_average_july', 'precip': 'precipitation_average_july'},
+    {'name': 'Ago', 'temp': 'temperature_average_august', 'precip': 'precipitation_average_august'},
+    {'name': 'Set', 'temp': 'temperature_average_september', 'precip': 'precipitation_average_september'},
+    {'name': 'Out', 'temp': 'temperature_average_october', 'precip': 'precipitation_average_october'},
+    {'name': 'Nov', 'temp': 'temperature_average_november', 'precip': 'precipitation_average_november'},
+    {'name': 'Dez', 'temp': 'temperature_average_december', 'precip': 'precipitation_average_december'},
+  ]
+
+  dry_months_count = 0
+  monthly_data = []
+
+  for month in months:
+    temp_value = getattr(data, month['temp'], None)
+    precip_value = getattr(data, month['precip'], None)
+    precip_limit = 2 * float(temp_value) if temp_value else None
+    condition = 'Seco' if precip_value and precip_value <= precip_limit else 'Chuvoso'
+
+    monthly_data.append({
+      'name': month['name'],
+      'temp': temp_value,
+      'precip': precip_value,
+      'condition': condition,
+    })
+
+    if condition == 'Seco':
+      dry_months_count += 1
+
+  avg_temp = round(sum(getattr(data, month['temp'], 0) for month in months) / 12, 4)
+  avg_precip = round(sum(getattr(data, month['precip'], 0) for month in months) / 12, 4)
+
+  return monthly_data, dry_months_count, {'avg_temp': avg_temp, 'avg_precip': avg_precip}
+
 def index(request):
-    city_list = Cidade.objects.all().order_by("estacao")
-    uf_list = Estado.objects.all()
+  return render(request, 'index.html')
 
-    if request.method == "POST":
-        cidade = int(request.POST['cidade'])
-        data = DadosHidricos.objects.filter(estacao=cidade).first()
-        cidade_selecionada = Cidade.objects.get(id=cidade)
-        total = 0
-        
-        if data:  # Se houver dados para a cidade
-            multiplicacao = {
-                'jan': 2 * float(data.t_med_jan),
-                'fev': 2 * float(data.t_med_fev),
-                'mar': 2 * float(data.t_med_mar),
-                'abr': 2 * float(data.t_med_abr),
-                'mai': 2 * float(data.t_med_mai),
-                'jun': 2 * float(data.t_med_jun),
-                'jul': 2 * float(data.t_med_jul),
-                'ago': 2 * float(data.t_med_ago),
-                'set': 2 * float(data.t_med_set),
-                'out': 2 * float(data.t_med_out),
-                'nov': 2 * float(data.t_med_nov),
-                'dez': 2 * float(data.t_med_dez),
-                'med_temp': round((data.t_med_jan + data.t_med_fev + data.t_med_mar + data.t_med_abr + data.t_med_mai + data.t_med_jun + data.t_med_jul + data.t_med_ago + data.t_med_set + data.t_med_out 
-                             + data.t_med_nov + data.t_med_dez)/12,4),
-                'med_precip': round((data.precip_md_jan + data.precip_md_fev + data.precip_md_mar + data.precip_md_abr + data.precip_md_mai + data.precip_md_jun + data.precip_md_jul + data.precip_md_ago + data.precip_md_set + data.precip_md_out 
-                             + data.precip_md_nov + data.precip_md_dez)/12,4),
-            }
-            if  data.precip_md_jan <= multiplicacao.get('jan') : total = total+1
-            if  data.precip_md_fev <= multiplicacao.get('fev') : total = total+1
-            if  data.precip_md_mar <= multiplicacao.get('mar') : total = total+1
-            if  data.precip_md_abr <= multiplicacao.get('abr') : total = total+1
-            if  data.precip_md_mai <= multiplicacao.get('mai') : total = total+1
-            if  data.precip_md_jun <= multiplicacao.get('jun') : total = total+1
-            if  data.precip_md_jul <= multiplicacao.get('jul') : total = total+1
-            if  data.precip_md_ago <= multiplicacao.get('ago') : total = total+1
-            if  data.precip_md_set <= multiplicacao.get('set') : total = total+1
-            if  data.precip_md_out <= multiplicacao.get('out') : total = total+1
-            if  data.precip_md_nov <= multiplicacao.get('nov') : total = total+1
-            if  data.precip_md_dez <= multiplicacao.get('dez') : total = total+1
-            
-        else:
-            multiplicacao = {}
-        
-            
+@require_GET
+def get_cities(request):
+  city_list = City.objects.all().order_by("station")
+  cities_data = [{"id": city.id,"station": city.station} for city in city_list]
+  return JsonResponse(cities_data, safe=False)
+  
+@require_GET
+def get_states(request):
+  states_list = State.objects.all().order_by("name")
+  states_data = [{"id": state.id,"name": state.name} for state in states_list]
+  return JsonResponse(states_data, safe=False)
 
-        return render(request, 'index.html', {
-            'city_list': city_list,
-            'uf_list': uf_list,
-            'data': data,
-            'multiplicacao': multiplicacao,
-            'cidade_selecionada': cidade_selecionada,
-            'total':total
-            # Passa o dicionário com a multiplicação de cada mês
-        })
-    
-    return render(request, 'index.html', {'city_list': city_list, 'uf_list': uf_list})
-    
-def table(request): 
-    city = request.GET.get('cidade')
-    #list = Precipitacao.objects.all().filter(cidade=city)
-    #return render(request, 'tabela.html', {'list':list})
-    return render(request, 'tabela.html')
+@require_GET
+def get_city(request, id):
+  city_id = id;
+  
+  if not city_id:
+    error_message = {"message": "id not passed"}
+    return JsonResponse(error_message, status=400) 
 
-def login(request):
-    return render(request, 'login.html')
+  city = get_object_or_404(City, id=city_id)
+  data = HydrologicalData.objects.filter(station=city).first()
 
+  if not data:
+    error_message = {"message": "city not exists"}
+    return JsonResponse(error_message, status=400) 
 
-def devs(request):
-    return render(request, 'devs.html')
-# Create your views here.
+  monthly_data, dry_months_count, averages = calculate_monthly_data(data)
+  
+  cities_data = {
+    'monthly_data': monthly_data,
+    'averages': averages,
+    'dry_months_count': dry_months_count,
+  }
+  return JsonResponse(cities_data, safe=False)
+  

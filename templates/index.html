@@ -1,256 +1,95 @@
-{% extends "_master.html" %}
-{% load static %}
-{% block main %}
-        <div class="meio">
-            <div class="d-flex">
-                <div>
-                    <h4>Selecione a Localização: </h4>
-                    <form action="{% url 'home' %}" class="selecionador" method = "POST">
-                        {% csrf_token %}
-                        <select id = 'uf'>
-                            {% for uf in uf_list %}
-                            <option value="{{uf.id}}">{{uf.nome}}</option>
-                            {% endfor %}
-                        </select>
-                        <select name="cidade" id="cidade">
-                            {% for city in city_list %}
-                            <option value="{{city.id}}" {% if city.id == cidade_selecionada.id %}selected{% endif %}>{{city.estacao}}</option>
-                            {% endfor %}
-                        </select>
-                        <input type="submit" value="Localizar"> 
-                    </form>
-                        {% if data %}
-                        <h4>
-                            Subtipo Climático: 
-                            {% if total < 1 %}
-                            Superúmido
-                            {% elif total <= 3%}
-                            Úmido
-                            {% elif total <= 5%}
-                            Semi-úmido
-                            {% elif total == 6%}
-                            Semi-árido brando
-                            {% elif total <= 8%}
-                            Mediano
-                            {% elif total <= 10%}
-                            Forte
-                            {% elif total == 11%}
-                            Subdesértico/Muito forte
-                            {% else %}
-                            Desértico
-                            {% endif %}
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta name="description" content="A climatic data tracker for cities and states" />
+    <meta name="keywords" content="tracker, climate, hydrological, weather" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ClimoTrack</title>
 
-                        </h4>
-                        {% endif %}
-                </div>
-            
-                <div class="tabela">
-                    <!-- Criar o mapa -->
-                    {% if data %}
-                    <table>
-                        <caption>{% if cidade_selecionada %}{{ cidade_selecionada.estacao }}{% else %}Selecione uma cidade{% endif %}</caption>
-                        <thead>
-                            <tr>
-                                <th>Mês</th>
-                                <th>Temp. (C°)</th>
-                                <th>Prec. (mm)</th>
-                                <th>Condição PM</th>
-                                
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <th>Jan</th>
-                                <td>{{data.t_med_jan}}</td>
-                                <td>{{data.precip_md_jan}}</td>
-                                <td>
-                                    {% if data.precip_md_jan <= multiplicacao.jan %}
-                                    Seco
-                                {% else %}
-                                    Chuvoso
-                                {% endif %}
-                                </td>
-                            </tr>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'styles/reset.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'styles/home.min.css' %}" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nice-select2/dist/css/nice-select2.css" />
+    <link rel="stylesheet" href="{% static 'styles/vendor.min.css' %}" />
 
-                            <tr>
-                                <th>Fev</th>
-                                <td>{{data.t_med_fev}}</td>
-                                <td>{{data.precip_md_fev}}</td>
-                                <td>
-                                    {% if data.precip_md_fev <= multiplicacao.fev %}
-                                    Seco
-                                {% else %}
-                                    Chuvoso
-                                {% endif %}
-                                </td>
-                                
-                            </tr>
+    <script src="https://cdn.jsdelivr.net/npm/nice-select2/dist/js/nice-select2.js"></script>
+    <script defer src="{% static 'scripts/home.js' %}"></script>
 
-                            <tr>
-                                <th>Mar</th>
-                                <td>{{data.t_med_mar}}</td>
-                                <td>{{data.precip_md_mar}}</td>
-                                <td>
-                                    {% if data.precip_md_mar <= multiplicacao.mar %}
-                                    Seco
-                                {% else %}
-                                    Chuvoso
-                                {% endif %}
-                                </td>
-                                
-                            </tr>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&family=Share+Tech&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="wrapper">
+        <a href="{% url 'index' %}" class="logo">ClimoTrack</a>
+        <nav class="navigation">
+          <ul>
+            <li>
+              <div data-state="current" class="link">Home</div>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+    <main class="app-main">
+      <section id="tracker">
+        <div class="wrapper">
+          <div class="form">
+            <form id="form" class="selector">
+              {% csrf_token %}
+              <h2>Selecione a cidade:</h2>
+              <label for="state-select">Estado:</label>
+              <select name="state" id="state-select"></select>
 
-                            <tr>
-                                <th>Abr</th>
-                                <td>{{data.t_med_abr}}</td>
-                                <td>{{data.precip_md_abr}}</td>
-                                <td>
-                                    {% if data.precip_md_abr <= multiplicacao.abr %}
-                                    Seco
-                                {% else %}
-                                    Chuvoso
-                                {% endif %}
-                                </td>
-                                
-                            </tr>
+              <label for="city-select">Cidade:</label>
+              <select name="city" id="city-select"></select>
 
-                            <tr>
-                                <th>Mai</th>
-                                <td>{{data.t_med_mai}}</td>
-                                <td>{{data.precip_md_mai}}</td>
-                                <td>
-                                    {% if data.precip_md_mai <= multiplicacao.mai %}
-                                    Seco
-                                {% else %}
-                                    Chuvoso
-                                {% endif %}
-                                </td>
-                                
-                            </tr>
+              <input type="submit" value="Filtrar" />
+            </form>
+            <div class="climatic-subtype" data-show="false" id="climatic-subtype"></div>
+          </div>
 
-                            <tr>
-                                <th>Jun</th>
-                                <td>{{data.t_med_jun}}</td>
-                                <td>{{data.precip_md_jun}}</td>
-                                <td>
-                                    {% if data.precip_md_jun <= multiplicacao.jun %}
-                                    Seco
-                                {% else %}
-                                    Chuvoso
-                                {% endif %}
-                                </td>
-                                
-                            </tr>
-
-                            <tr>
-                                <th>Jul</th>
-                                <td>{{data.t_med_jul}}</td>
-                                <td>{{data.precip_md_jul}}</td>
-                                <td>
-                                    {% if data.precip_md_jul <= multiplicacao.jul %}
-                                    Seco
-                                {% else %}
-                                    Chuvoso
-                                {% endif %}
-                                </td>
-                                
-                            </tr>
-
-                            <tr>
-                                <th>Ago</th>
-                                <td>{{data.t_med_ago}}</td>
-                                <td>{{data.precip_md_ago}}</td>
-                                <td>
-                                    {% if data.precip_md_ago <= multiplicacao.ago %}
-                                    Seco
-                                {% else %}
-                                    Chuvoso
-                                {% endif %}
-                                </td>
-                                
-                            </tr>
-
-                            <tr>
-                                <th>Set</th>
-                                <td>{{data.t_med_set}}</td>
-                                <td>{{data.precip_md_set}}</td>
-                                <td>
-                                    {% if data.precip_md_set <= multiplicacao.set %}
-                                    Seco
-                                {% else %}
-                                    Chuvoso
-                                {% endif %}
-                                </td>
-                                
-                            </tr>
-
-                            <tr>
-                                <th>Out</th>
-                                <td>{{data.t_med_out}}</td>
-                                <td>{{data.precip_md_out}}</td>
-                                <td>
-                                    {% if data.precip_md_out <= multiplicacao.out %}
-                                    Seco
-                                {% else %}
-                                    Chuvoso
-                                {% endif %}
-                                </td>
-                                
-                            </tr>
-
-                            <tr>
-                                <th>Nov</th>
-                                <td>{{data.t_med_nov}}</td>
-                                <td>{{data.precip_md_nov}}</td>
-                                <td>
-                                    {% if data.precip_md_nov <= multiplicacao.nov %}
-                                    Seco
-                                {% else %}
-                                    Chuvoso
-                                {% endif %}
-                                </td>
-                                
-                            </tr>
-
-                            <tr>
-                                <th>Dez</th>
-                                <td>{{data.t_med_dez}}</td>
-                                <td>{{data.precip_md_dez}}</td>
-                                <td>
-                                    {% if data.precip_md_dez <= multiplicacao.dez %}
-                                    Seco
-                                {% else %}
-                                    Chuvoso
-                                {% endif %}
-                                </td>
-                                
-                            </tr>
-                            <tr>
-                                <th>Média</th>
-                                <td>{{multiplicacao.med_temp}}</td>
-                                <td>{{multiplicacao.med_precip}}</td>
-                                <th>Meses Secos: {{total}}</th>
-                            </tr>
-                        </tbody>
-                    </table>
-                    
-                    {% else %}
-                        <img src="{% static "imagens/LogoRN.png" %}" alt="Logo do RN" class="rn" usemap="#mapa">
-                        <map name="mapa" id="mapa">
-                            <area shape="poly" coords="0,0,0,250,250,0,250,250" href="https://github.com/arthurr07/ClimoTrack" alt="">
-                        </map>
-                    {% endif %}
-                </div>
+          <div class="data-show" id="data-show">
+            <div class="data">
+              <h2 id="city-name"></h2>
+              <div class="table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Mês</th>
+                      <th>Temp. (°C)</th>
+                      <th>Precip. (mm)</th>
+                      <th>Condição</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cityData">
+                    {% for month in monthly_data %}
+                      <tr>
+                        <th>{{ month.name }}</th>
+                        <td>{{ month.temp|floatformat:1 }}°C</td>
+                        <td>{{ month.precip|floatformat:1 }}mm</td>
+                        <td>{{ month.condition }}</td>
+                      </tr>
+                    {% endfor %}
+                    <tr>
+                      <th>Média</th>
+                      <td>{{ averages.avg_temp|floatformat:1 }}°C</td>
+                      <td>{{ averages.avg_precip|floatformat:1 }}mm</td>
+                      <th>Meses secos: {{ dry_months_count }}</th>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-
-            <section class = "legenda">
-                <h5>Legenda:</h5>
-                    <ul>
-                        <li>AC - Área Comunitária</li>
-                        <li>FZ - Fazenda</li>
-                        <li>ST - Sítio</li>
-                    </ul>
-            </section>
-            
+            <div class="empty-data">
+              <img src="{% static 'images/empty-data.svg' %}" alt="empty-data" />
+              <p>Filtre os dados climáticos da cidade que desejar</p>
+            </div>
+          </div>
         </div>
-    {% endblock %}
+      </section>
+    </main>
+  </body>
+</html>
